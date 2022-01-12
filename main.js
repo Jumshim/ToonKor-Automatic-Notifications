@@ -3,17 +3,18 @@ var fs = require('fs');
 var nodemailer = require('nodemailer');
 const webtoons = require("./webtoons.json");
 let titles = webtoons["titles"];
+let creds = require("./credentials.json");
 
 //---------------------------------
 var series = [];
 
 for (var x of titles) {
-    if(x.day === getDay()) {
+    if(x.day === "Thursday") {
         x.chapter += 1;
         series.push(x);
     }
 }
-console.log(createMessage());
+sendMail();
 //---------------------------------
 
 function getDay() {
@@ -26,11 +27,8 @@ function sendMail() {
     var transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-            /**REMINDER TO FILL THIS IN WHEN TESTING, AND DON'T UPLOAD TO GITHUB <3
-
-            user: 
-            pass: 
-            */
+            user: creds.username,
+            pass: creds.password
         }
     });
     var mailOptions = {
