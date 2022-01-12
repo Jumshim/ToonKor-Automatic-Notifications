@@ -3,9 +3,20 @@ var fs = require('fs');
 var nodemailer = require('nodemailer');
 const webtoons = require("./webtoons.json");
 let titles = webtoons["titles"];
-let creds = require("./credentials.json");
+
+let creds;
+try { creds = require("./credentials.json"); }
+catch(err) { throw new Error("credentials.json does not exist, check README"); }
 
 //---------------------------------
+
+var keys = ["username", "password", "send"]
+for (var item of keys) {
+    if(creds[item] == null) {
+        throw new Error(`${item} is not defined in credentials.json`);
+    }
+}
+
 var series = [];
 
 for (var x of titles) {
@@ -32,8 +43,8 @@ function sendMail() {
         }
     });
     var mailOptions = {
-        from: 'onlyforbrawlstara@gmail.com',
-        to: 'munjeffrey2003@gmail.com',
+        from: creds.username,
+        to: creds.send,
         subject: 'KOREAN RAW UPDATER',
         text: createMessage()
     };
