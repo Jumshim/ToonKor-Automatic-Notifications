@@ -1,32 +1,42 @@
-//open titles.txt, read the title, print the lines
 var fs = require('fs');
 var nodemailer = require('nodemailer');
-const webtoons = require("./webtoons.json");
-let titles = webtoons["titles"];
-
-let creds;
-try { creds = require("./credentials.json"); }
-catch(err) { throw new Error("credentials.json does not exist, check README"); }
-
 //---------------------------------
+/**
+ * What if it's not just me who wants webtoon reminders?
+ * 
+ * Software for myself -> software for others
+ * 
+ * Need a web framework to store other people's data
+ */
 
-var keys = ["username", "password", "send"]
-for (var item of keys) {
-    if(creds[item] == null) {
-        throw new Error(`${item} is not defined in credentials.json`);
+function getCredentials() {
+    let creds;
+    try {
+        creds = require("./credentials.json"); 
+    } catch(err) {
+        throw new Error("credentials.json does not exist, check README"); 
     }
+    var keys = ["username", "password", "send"]
+    for (var item of keys) {
+        if(creds[item] == null) {
+            throw new Error(`${item} is not defined in credentials.json`);
+        }
+    }
+    return creds;
 }
 
-var series = [];
-
-for (var x of titles) {
-    if(x.day === getDay()) {
-        x.chapter += 1;
-        series.push(x);
+function getUpdatedDailyTitles() {
+    const webtoons = require("./webtoons.json");
+    let titles = webtoons["titles"];
+    var series = [];
+    for (var x of titles) {
+        if(x.day === getDay()) {
+            x.chapter += 1;
+            series.push(x);
+        }
     }
+    return [series, webtoons];
 }
-sendMail();
-//---------------------------------
 
 function getDay() {
     let dateOb = new Date();
@@ -34,7 +44,8 @@ function getDay() {
     var day = name[dateOb.getDay()];
     return day;
 }
-function sendMail() {
+
+function sendMail(series, creds) {
     var transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -46,7 +57,7 @@ function sendMail() {
         from: creds.username,
         to: creds.send,
         subject: 'KOREAN RAW UPDATER',
-        text: createMessage()
+        text: createMessage(series)
     };
     transporter.sendMail(mailOptions, function(error, info) {
         if(error){
@@ -56,18 +67,29 @@ function sendMail() {
         }
     });
 }
-function createMessage() {
+
+function createMessage(series) {
     let message = "Newly Updated Korean Raws:\n";
     for(var x of series) {
         message += `
         ${x.name}:
-            URL: ${updateInfo(x)}
-            Chapter:${x.url + x.chapter + "%ED%99%94.html"}
+            URL: ${x.url + x.chapter + "%ED%99%94.html"}
+            Chapter:${x.chapter}
             `
     }
     return message;
 }
-function updateInfo(arg){
-    arg.chapter = arg.chapter + 1;
-    return arg.url + arg.chapter + "%ED%99%94.html";
+
+function writeSeries(webtoons) {
+    fs.writeFileSync('webtoons.json', JSON.stringify(webtoons, null, 2));
 }
+
+function runMain() {
+    let creds = getCredentials();
+    let series, webtoons;
+    [series, webtoons] = getUpdatedDailyTitles();
+    sendMail(series, creds);
+    writeSeries(webtoons);
+}
+
+runMain();
