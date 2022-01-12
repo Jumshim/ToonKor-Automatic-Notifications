@@ -20,7 +20,7 @@ for (var item of keys) {
 var series = [];
 
 for (var x of titles) {
-    if(x.day === "Thursday") {
+    if(x.day === getDay()) {
         x.chapter += 1;
         series.push(x);
     }
