@@ -1,12 +1,20 @@
 var fs = require('fs');
 var nodemailer = require('nodemailer');
-//---------------------------------
 /**
+ * 
  * What if it's not just me who wants webtoon reminders?
+ * 
+ * credentials -> array -> unique per person; map
  * 
  * Software for myself -> software for others
  * 
  * Need a web framework to store other people's data
+ * 
+ * convert to class so I can know how javascript classes work
+ * 
+ * I should learn how a web framework works
+ * RubyonRails, django, flask
+ * 
  */
 
 function getCredentials() {
