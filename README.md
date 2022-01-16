@@ -28,11 +28,3 @@ go through the array and update each of the chapters + URLS weekly
 use that array to format an email message
 
 sends the email
-
-### Changing things into classes
-
-From an initial analysis of my program, 2 classes instantly stand out
-
-One class should be in charge of all of the webtoon data; holding the crednetials and managing/updating the .json of webtoons
-
-The other class should be in charge of the after; sending the email and creating the message
