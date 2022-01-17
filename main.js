@@ -1,5 +1,14 @@
 var fs = require('fs');
 const nodemailer = require('nodemailer');
+const sqlite3 = require('sqlite3').verbose();
+
+let db = new sqlite3.Database('sample.db', (err) => {
+    if(err) {
+        return console.error(err.message);
+    }
+    console.log('Connected to the in-memory SQlite database.');
+});
+db.close();
 
 /**
  * UserProfile is responsible for verifying a user's webtoon + email data,
