@@ -1,14 +1,46 @@
-var fs = require('fs');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
 
-let db = new sqlite3.Database('sample.db', (err) => {
-    if(err) {
-        return console.error(err.message);
+/**
+ * Database gets a sqlite3 database and serves to:
+ * get the appropriate webtoons for notification
+ * updates appropriate webtoons
+ */
+
+class Database {
+    constructor(db, day) {
+        this.db = db;
+        this.day = day;
     }
-    console.log('Connected to the in-memory SQlite database.');
-});
-db.close();
+
+    getTitles() {
+        let data = [];
+        return new Promise(resolve => {
+            this.db.all(`SELECT * FROM webtoons WHERE user_id=? AND day=?`, [1, this.day], (err, rows) => {
+                if(err) { throw err };
+                rows.forEach((row => {
+                    data.push(row);
+                }))
+                resolve(data);
+            })
+        })
+    }
+
+    updateDailyTitles() {
+        this.db.run(`UPDATE webtoons SET chapter=chapter+1 WHERE day=?`, [this.day], err => {
+            if(err) { return console.error(err.message); }
+        });
+    }
+
+    getReceivingAddress() {
+        this.db.get(`SELECT email FROM users WHERE id=1`, (err, row) => {
+            if(err) { return console.error(err.message); }
+            return row["email"];
+        });
+    }
+}
+
 
 /**
  * UserProfile is responsible for verifying a user's webtoon + email data,
@@ -17,10 +49,10 @@ db.close();
  */
 
 class UserProfile {
-    constructor(credentialsFileName, webtoonsFileName) {
+    constructor(credentialsFileName) {
         this.credentialsFileName = credentialsFileName;
-        this.webtoonsFileName = webtoonsFileName;
     }
+    
     getCredentials() {
         let creds;
         try {
@@ -37,24 +69,11 @@ class UserProfile {
         return creds;
     }
 
-    getUpdatedDailyTitles(day) {
-        const webtoons = require(this.webtoonsFileName);
-        const titles = webtoons["titles"];
-        let series = [];
-        for (let x of titles) {
-            if(x.day === day) {
-                x.chapter += 1;
-                series.push(x);
-            }
-        }
-        return [series, webtoons];
-    }
-
-    createMessage(series) {
+    createMessage(webtoons) {
         let message = "Newly Updated Korean Raws:\n";
-        for(let x of series) {
+        for(let x of webtoons) {
             message += `
-            ${x.name}:
+            ${x.title}:
                 URL: ${x.url + x.chapter + "%ED%99%94.html"}
                 Chapter:${x.chapter}
                 `
@@ -73,7 +92,7 @@ class MailSender {
         this.credentials = credentials;
     }
 
-    sendMail(text, subject) {
+    async sendMail(text, subject, receiverAddress) {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
@@ -81,6 +100,7 @@ class MailSender {
                 pass: this.credentials.password
             }
         });
+        //this.credentials.send is being used as a replacement for database.getReceivingAddress for now
         const mailOptions = {
             from: this.credentials.username,
             to: this.credentials.send,
@@ -104,17 +124,22 @@ function getDay() {
     return day;
 }
 
-function writeData(data, fileName) {
-    fs.writeFileSync(fileName, JSON.stringify(data, null, 2));
-}
-
-function runMain() {
+async function runMain() {
+    let db = new sqlite3.Database('webtoons.db', sqlite3.OPEN_READWRITE, (err) => {
+        if(err) {
+            return console.error(err.message);
+        }
+        console.log('Connected to the in-memory SQlite database.');
+    });
     const user = new UserProfile("./credentials.json", "./webtoons.json");
-    let series, webtoons;
-    [series, webtoons] = user.getUpdatedDailyTitles(getDay());
+    let database = new Database(db, getDay());
+    //When testing, change getDay() to "Thursday"
+    let webtoons = await database.getTitles();    
     const mailer = new MailSender(user.getCredentials());
-    mailer.sendMail(user.createMessage(series), 'Korean Raw Updater');
-    writeData(webtoons, user.webtoonsFileName);
+    mailer.sendMail(user.createMessage(webtoons), 'Korean Raw Updater', database.getReceivingAddress());
+    //database.getReceivingAddress isn't working
+    database.updateDailyTitles();
+    db.close();
 }
 
 runMain();
