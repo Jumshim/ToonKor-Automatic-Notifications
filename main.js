@@ -2,15 +2,15 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const sqlite3 = require('sqlite3').verbose();
 
-let db = new sqlite3.Database('webtoons.db', sqlite3.OPEN_READWRITE, (err) => {
-    if(err) {
-        return console.error(err.message);
-    }
-    console.log('Connected to the in-memory SQlite database.');
-});
 
-let records = [];
+
 function getTitles() {
+    let db = new sqlite3.Database('webtoons.db', sqlite3.OPEN_READWRITE, (err) => {
+        if(err) {
+            return console.error(err.message);
+        }
+        console.log('Connected to the in-memory SQlite database.');
+    });
     let data = [];
     return new Promise(resolve => {
         db.all('SELECT * FROM webtoons WHERE user_id=?', 1, (err, rows) => {
@@ -23,23 +23,14 @@ function getTitles() {
     })
 }
 
-async function waitTitles() {
-    records = await getTitles();
 
-    records.forEach(e => {
-        console.log(e);
-    });
-}
-
-waitTitles();
-db.close();
 /**
  * UserProfile is responsible for verifying a user's webtoon + email data,
  * updating their webtoons list,
  * and creating a message to be sent to the MailSender
  */
 
-/** 
+
 class UserProfile {
     constructor(credentialsFileName, webtoonsFileName) {
         this.credentialsFileName = credentialsFileName;
@@ -86,13 +77,13 @@ class UserProfile {
         return message;
     }
 }
-*/
+
 /**
  * Mail sender takes in a set of credentials (sender address, sender password, receiver address)
  * and sends an email accordingly
  */
 
-/**
+
 class MailSender {
     constructor(credentials){ 
         this.credentials = credentials;
@@ -141,6 +132,5 @@ function runMain() {
     mailer.sendMail(user.createMessage(series), 'Korean Raw Updater');
     writeData(webtoons, user.webtoonsFileName);
 }
-
+db.close();
 runMain();
-*/
