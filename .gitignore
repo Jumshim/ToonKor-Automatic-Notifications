@@ -109,3 +109,5 @@ dist
 credentials.json
 
 webtoons.json
+
+webtoons.db
