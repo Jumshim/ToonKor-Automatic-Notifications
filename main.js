@@ -8,6 +8,32 @@ const sqlite3 = require('sqlite3').verbose();
  * updates appropriate webtoons
  */
 
+/**
+ * ORM = separate class for every single table
+ * user object, webtoon object ...
+ * RAW sql statements -> collection of objects that represent the rows/columns
+ * 
+ * class User {
+ *      constructor(db) {
+ *          this.db = db;
+ *          this.db.getAll()
+ *          //transforms everything in db to object representations
+ *      }
+ * 
+ *      getValues() {  
+ *          
+ *      }
+ * }
+ * 
+ * what's nice about raw sql statements;
+ * to serialize/martial millions of data is faster when using raw sql vs ORMs
+ * a lot easier to work with tuples
+ * 
+ * But it is inconvenient; abstraction sucks
+ * 
+ * when you start doing bulk things, the optimizations are trash
+ */
+
 class Database {
     constructor(db) {
         this.db = db;
@@ -32,11 +58,13 @@ class Database {
         });
     }
 
-    getReceivingAddress(userID) {
-        this.db.get(`SELECT email FROM users WHERE id=?`, [userID], (err, row) => {
-            if(err) { return console.error(err.message); }
-            return row["email"];
-        });
+    async getReceivingAddress(userID) {
+        return new Promise(resolve => {
+            this.db.get(`SELECT email FROM users WHERE id=?`, [userID], (err, row) => {
+                if(err) { return console.error(err.message); }
+                resolve(row["email"]);
+            });
+        })
     }
 }
 
@@ -59,7 +87,7 @@ class UserProfile {
         } catch(err) {
             throw new Error("credentials.json does not exist, check README"); 
         }
-        const keys = ["username", "password", "send"]
+        const keys = ["username", "password"]
         for (let item of keys) {
             if(creds[item] == null) {
                 throw new Error(`${item} is not defined in credentials.json`);
@@ -99,16 +127,15 @@ class MailSender {
                 pass: this.credentials.password
             }
         });
-        //this.credentials.send is being used as a replacement for database.getReceivingAddress for now
         const mailOptions = {
             from: this.credentials.username,
-            to: this.credentials.send,
+            to: receiverAddress,
             subject: subject,
             text: text
         };
         transporter.sendMail(mailOptions, function(error, info) {
             if(error){
-                console.log(error);
+                throw new Error('Email did not work');
             } else{
                 console.log('Email sent: ' + info.response);
             }
@@ -128,16 +155,20 @@ async function runMain() {
         if(err) {
             return console.error(err.message);
         }
-        console.log('Connected to the in-memory SQlite database.');
+        console.log('Connected to the out-of-memory SQlite database.');
     });
+
     const user = new UserProfile("./credentials.json", "./webtoons.json");
     let database = new Database(db);
-    //When testing, change getDay() to "Thursday"
     let webtoons = await database.getTitles(1, getDay());    
     const mailer = new MailSender(user.getCredentials());
-    mailer.sendMail(user.createMessage(webtoons), 'Korean Raw Updater', database.getReceivingAddress(1));
-    //database.getReceivingAddress isn't working
-    database.updateDailyTitles(1, getDay());
+    let email = await database.getReceivingAddress(1);
+    try { 
+        await mailer.sendMail(user.createMessage(webtoons), 'Korean Raw Updater', email);
+        database.updateDailyTitles(1, getDay());
+    } catch(e) {
+        console.log('Error with the email');
+    }
     db.close();
 }
 
