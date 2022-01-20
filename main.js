@@ -9,15 +9,14 @@ const sqlite3 = require('sqlite3').verbose();
  */
 
 class Database {
-    constructor(db, day) {
+    constructor(db) {
         this.db = db;
-        this.day = day;
     }
 
-    getTitles() {
+    getTitles(userID, day) {
         let data = [];
         return new Promise(resolve => {
-            this.db.all(`SELECT * FROM webtoons WHERE user_id=? AND day=?`, [1, this.day], (err, rows) => {
+            this.db.all(`SELECT * FROM webtoons WHERE user_id=? AND day=?`, [userID, day], (err, rows) => {
                 if(err) { throw err };
                 rows.forEach((row => {
                     data.push(row);
@@ -27,14 +26,14 @@ class Database {
         })
     }
 
-    updateDailyTitles() {
-        this.db.run(`UPDATE webtoons SET chapter=chapter+1 WHERE day=?`, [this.day], err => {
+    updateDailyTitles(day) {
+        this.db.run(`UPDATE webtoons SET chapter=chapter+1 WHERE day=?`, [day], err => {
             if(err) { return console.error(err.message); }
         });
     }
 
-    getReceivingAddress() {
-        this.db.get(`SELECT email FROM users WHERE id=1`, (err, row) => {
+    getReceivingAddress(userID) {
+        this.db.get(`SELECT email FROM users WHERE id=?`, [userID], (err, row) => {
             if(err) { return console.error(err.message); }
             return row["email"];
         });
@@ -132,13 +131,13 @@ async function runMain() {
         console.log('Connected to the in-memory SQlite database.');
     });
     const user = new UserProfile("./credentials.json", "./webtoons.json");
-    let database = new Database(db, getDay());
+    let database = new Database(db);
     //When testing, change getDay() to "Thursday"
-    let webtoons = await database.getTitles();    
+    let webtoons = await database.getTitles(1, getDay());    
     const mailer = new MailSender(user.getCredentials());
-    mailer.sendMail(user.createMessage(webtoons), 'Korean Raw Updater', database.getReceivingAddress());
+    mailer.sendMail(user.createMessage(webtoons), 'Korean Raw Updater', database.getReceivingAddress(1));
     //database.getReceivingAddress isn't working
-    database.updateDailyTitles();
+    database.updateDailyTitles(1, getDay());
     db.close();
 }
 
