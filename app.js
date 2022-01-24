@@ -35,14 +35,15 @@ app.use(cors());
 
 app.set('view engine', 'ejs');
 
+//req is an object containing information about the HTTP request that raised the event. 
+//In response to req, you use res to send back the desired HTTP response.
 app.get('/data', async function(req, res) {
     let webtoons = await getTitles(1, "Thursday");
     res.json(webtoons);
 });
 
 app.get('/', async function(req, res) {
-    let webtoons = await getTitles(1, "Thursday");    
-    res.render('index', {webtoons});
+    res.sendFile(path.join(__dirname+'index.html'));
 });
 
 app.listen(port, function() {

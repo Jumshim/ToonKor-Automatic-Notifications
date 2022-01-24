@@ -1,5 +1,9 @@
 'use strict';
 
+//python -m SimpleHTTPServer
+//create a new app inside 
+//network call -> db -> render
+
 class Thingy extends React.Component{
   componentDidMount() {
     console.log('Component Did Mount');
@@ -12,7 +16,7 @@ class Thingy extends React.Component{
   componentWillUnmount() {
     console.log('Component has unmounted');
   }
-  
+
   render() {
     return (
       <span>{this.props.value}</span>
