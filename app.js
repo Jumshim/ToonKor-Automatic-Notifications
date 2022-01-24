@@ -28,6 +28,19 @@ function getTitles(userID, day) {
     })
 }
 
+function getAllTitles() {
+    let data = [];
+    return new Promise(resolve => {
+        db.all(`SELECT title FROM webtoons`, (err, rows) => {
+            if(err) { throw err };
+            rows.forEach((row => {
+                data.push(row);
+            }))
+            resolve(data);
+        })
+    })
+}
+
 
 app.use(express.static(path.join(__dirname, 'js')));
 
@@ -42,9 +55,16 @@ app.get('/data', async function(req, res) {
     res.json(webtoons);
 });
 
-app.get('/', async function(req, res) {
-    res.sendFile(path.join(__dirname+'index.html'));
+app.get('/resource', async function(req, res) {
+    let repo = await getAllTitles();
+    res.json(repo);
 });
+
+app.get('/', async function(req, res) {
+    let webtoons = await getTitles(1, "Thursday");
+    let repo = await getAllTitles();
+    res.render('index', {data: {webtoons: webtoons, repo: repo}});
+})
 
 app.listen(port, function() {
     console.log(`Example app listening on port ${port}!`);
